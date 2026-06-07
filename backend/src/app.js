@@ -5,6 +5,7 @@ const healthRouter = require("./routes/health");
 const uploadRouter = require("./routes/upload");
 const summaryRouter = require("./routes/summary");
 const analysisRouter = require("./routes/analysisRoutes");
+const paperRouter = require("./routes/paperRoutes");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use("/api/health", healthRouter);
 app.use("/api/papers", uploadRouter);
+app.use("/api/papers", paperRouter);
 app.use("/api/papers/summary", summaryRouter);
 app.use("/api/papers/analyze", analysisRouter);
 

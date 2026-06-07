@@ -16,7 +16,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
     return res.json({
       message: "Upload successful",
+      originalFilename: req.file.originalname,
       filename: req.file.filename,
+      storedFilename: req.file.filename,
       text: parsed.text
     });
   } catch (error) {

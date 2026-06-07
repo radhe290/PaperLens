@@ -1,6 +1,6 @@
 # PaperLens Project Progress
 
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 ## Phase 1
 - [x] Task 1: Base structure and git init (COMPLETED)
@@ -23,9 +23,12 @@ Last updated: 2026-06-06
 - [ ] Protected routes
 
 ## Phase 5
-- [ ] MongoDB integration
-- [ ] User schema
-- [ ] Paper schema
+- [x] Task 8: MongoDB Integration and Persistent Paper Storage (COMPLETED)
+- [x] MongoDB integration (COMPLETED)
+- [ ] User schema (DEFERRED - authentication not part of Task 8)
+- [x] Paper schema (COMPLETED)
+- [x] Persistent paper CRUD APIs (COMPLETED)
+- [x] Saved papers dashboard (COMPLETED)
 
 ## Phase 6
 - [x] Task 6: AI-Powered Paper Summarization (COMPLETED)
@@ -43,13 +46,23 @@ Last updated: 2026-06-06
 - [x] Learning path generation (COMPLETED)
 
 ## Phase 8
+- [x] Task 9: Saved Papers Dashboard (COMPLETED)
+- [x] Task 10: Saved Papers Dashboard search, filtering, and sorting (COMPLETED)
 - [ ] Flashcard generation
 
 ## Phase 9
 - [ ] Quiz generation
 
 ## Phase 10
-- [ ] Dashboard UI improvements
+- [x] Dashboard search bar and sorting dropdown (COMPLETED)
+- [x] Paginated saved papers API with search and sort query support (COMPLETED)
+- [x] Empty, loading, and error states for filtered dashboard results (COMPLETED)
+- [ ] Additional dashboard UI improvements
+
+## Task 10 Completion Notes
+- Backend `GET /api/papers` now supports title/file-name search, upload-date sorting, alphabetical sorting, pagination metadata, bounded page size, and lean list queries.
+- Paper model includes dashboard-friendly indexes for upload date, title, and original filename.
+- Frontend dashboard adds debounced search, Newest/Oldest/A-Z/Z-A sorting, paginated loading, "No papers found" search results state, and preserved View Analysis/Delete actions.
 
 ## Phase 11
 - [ ] Deployment (Vercel + Render)

@@ -45,7 +45,7 @@
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   gap: 24px;
 }
 
@@ -94,7 +94,7 @@
   gap: 12px;
 }
 
-button {
+.paper-page button {
   border: 0;
   border-radius: 999px;
   padding: 12px 18px;
@@ -109,21 +109,118 @@ button {
   box-shadow: 0 16px 30px rgba(15, 118, 110, 0.22);
 }
 
-button:hover:not(:disabled) {
+.paper-page button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-button:disabled {
+.paper-page button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-button.secondary {
+.paper-page button.secondary {
   background: var(--button-secondary);
   color: var(--text-strong);
   box-shadow: none;
   border: 1px solid var(--border);
+}
+
+.paper-page button.compact {
+  padding: 9px 12px;
+  font-size: 0.88rem;
+}
+
+.paper-page button.danger {
+  background: rgba(239, 68, 68, 0.09);
+  color: #b91c1c;
+  box-shadow: none;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.field-label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.field-label input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.72);
+  font: inherit;
+}
+
+.dashboard-panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading h2 {
+  margin: 0;
+}
+
+.paper-list {
+  display: grid;
+  gap: 12px;
+}
+
+.paper-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.paper-row.active {
+  border-color: var(--accent);
+  background: rgba(79, 70, 229, 0.06);
+}
+
+.paper-select {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.25fr) minmax(130px, 0.9fr) minmax(100px, 0.7fr) minmax(100px, 0.7fr);
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  text-align: left;
+  font-weight: 600;
+}
+
+.paper-page .paper-select:hover:not(:disabled) {
+  transform: none;
+}
+
+.paper-select span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.paper-title {
+  color: var(--text-strong);
+  font-weight: 800;
 }
 
 .status,
@@ -203,6 +300,11 @@ button.secondary {
 @media (max-width: 900px) {
   .workspace-grid,
   .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .paper-row,
+  .paper-select {
     grid-template-columns: 1fr;
   }
 

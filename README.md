@@ -9,9 +9,13 @@ Research Companion AI that helps users understand research papers through AI-pow
 ### Current Features
 - PDF Upload
 - PDF Text Extraction
+- AI Summarization with Gemini
+- Paper Intelligence Layer with concepts, prerequisites, domain, difficulty, and learning path
+- MongoDB-backed saved papers dashboard
+- Saved paper search by title or file name
+- Saved paper sorting by newest, oldest, A-Z, and Z-A
 
 ### Planned Features
-- AI Summarization
 - Chat with Paper
 - Flashcard Generation
 - Quiz Generation
@@ -30,6 +34,7 @@ Research Companion AI that helps users understand research papers through AI-pow
 ### Backend
 - Node.js
 - Express.js
+- Mongoose
 
 ### Database
 - MongoDB Atlas
@@ -74,16 +79,32 @@ npm start
 ## Development Roadmap
 
 - [x] Project Setup
-- [ ] React Frontend
-- [ ] Backend Setup
-- [ ] PDF Upload
-- [ ] PDF Parsing
+- [x] React Frontend
+- [x] Backend Setup
+- [x] PDF Upload
+- [x] PDF Parsing
+- [x] AI Summarization
+- [x] Paper Intelligence Layer
+- [x] Saved Papers Dashboard
+- [x] Dashboard Search and Sorting
 - [ ] Authentication
-- [ ] AI Summarization
 - [ ] Chat with Paper
 - [ ] Flashcards
 - [ ] Quiz Generator
 - [ ] Deployment
+
+---
+
+## Saved Papers Dashboard API
+
+`GET /api/papers` supports paginated dashboard queries:
+
+- `search`: optional title or original file name search
+- `sort`: `newest`, `oldest`, `title-asc`, or `title-desc`
+- `page`: page number, defaults to `1`
+- `limit`: page size, defaults to `12` and is capped at `50`
+
+The response includes `papers` plus `pagination` metadata for efficient loading.
 
 ---
 
