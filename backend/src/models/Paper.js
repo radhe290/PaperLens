@@ -2,6 +2,12 @@ const mongoose = require("mongoose");
 
 const paperSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
     title: {
       type: String,
       required: true,
@@ -15,12 +21,37 @@ const paperSchema = new mongoose.Schema(
     },
     storedFilename: {
       type: String,
-      required: true,
-      trim: true
+      trim: true,
+      default: ""
+    },
+    cloudinaryPublicId: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    fileUrl: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    fileSize: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     extractedText: {
       type: String,
       required: true
+    },
+    pageCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    wordCount: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     summary: {
       shortSummary: {
@@ -89,7 +120,9 @@ paperSchema.pre("findOneAndUpdate", function () {
 });
 
 paperSchema.index({ uploadDate: -1 });
+paperSchema.index({ userId: 1, uploadDate: -1 });
 paperSchema.index({ title: 1 });
 paperSchema.index({ originalFilename: 1 });
+paperSchema.index({ cloudinaryPublicId: 1 });
 
 module.exports = mongoose.model("Paper", paperSchema);

@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -19,6 +20,8 @@ const emptyAnalysis = {
   learningPath: []
 };
 
+const MAX_PDF_SIZE_BYTES = 20 * 1024 * 1024;
+
 function formatDate(value) {
   if (!value) {
     return "Not available";
@@ -30,12 +33,46 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-function PDFUpload() {
+function formatFileSize(bytes) {
+  if (!bytes) {
+    return "Not available";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function getDownloadUrl(fileUrl) {
+  if (!fileUrl) {
+    return "";
+  }
+
+  if (fileUrl.includes("/upload/") && fileUrl.includes("cloudinary.com")) {
+    return fileUrl.replace("/upload/", "/upload/fl_attachment/");
+  }
+
+  return fileUrl;
+}
+
+function PDFUpload({ onActivityChange }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedPaper, setUploadedPaper] = useState({
     title: "",
     originalFilename: "",
-    storedFilename: ""
+    storedFilename: "",
+    cloudinaryPublicId: "",
+    fileUrl: "",
+    fileSize: 0,
+    pageCount: 0,
+    wordCount: 0
   });
   const [currentPaperId, setCurrentPaperId] = useState("");
   const [savedPapers, setSavedPapers] = useState([]);
@@ -92,7 +129,12 @@ function PDFUpload() {
     setUploadedPaper({
       title: file?.name?.replace(/\.pdf$/i, "") || "",
       originalFilename: file?.name || "",
-      storedFilename: ""
+      storedFilename: "",
+      cloudinaryPublicId: "",
+      fileUrl: "",
+      fileSize: file?.size || 0,
+      pageCount: 0,
+      wordCount: 0
     });
     setCurrentPaperId("");
     resetGeneratedState();
@@ -101,6 +143,16 @@ function PDFUpload() {
   const onUpload = async () => {
     if (!selectedFile) {
       setStatus("Please select a PDF file.");
+      return;
+    }
+
+    if (selectedFile.type !== "application/pdf") {
+      setStatus("Only PDF files can be uploaded.");
+      return;
+    }
+
+    if (selectedFile.size > MAX_PDF_SIZE_BYTES) {
+      setStatus("PDF files must be 20MB or smaller.");
       return;
     }
 
@@ -122,15 +174,21 @@ function PDFUpload() {
         }
       );
 
-      setStatus(`Uploaded: ${response.data.filename}`);
+      setStatus(`Uploaded to cloud storage: ${response.data.originalFilename}`);
       setExtractedText(response.data.text || "");
       setUploadedPaper({
         title: selectedFile.name.replace(/\.pdf$/i, ""),
         originalFilename: response.data.originalFilename || selectedFile.name,
-        storedFilename: response.data.storedFilename || response.data.filename || ""
+        storedFilename: response.data.storedFilename || response.data.filename || "",
+        cloudinaryPublicId: response.data.cloudinaryPublicId || "",
+        fileUrl: response.data.fileUrl || response.data.secureUrl || "",
+        fileSize: response.data.fileSize || selectedFile.size || 0,
+        pageCount: response.data.pageCount || 0,
+        wordCount: response.data.wordCount || 0
       });
       setSelectedFile(null);
       setCurrentPaperId("");
+      onActivityChange?.();
     } catch (error) {
       const message =
         error.response?.data?.error || error.message || "Upload failed.";
@@ -166,7 +224,8 @@ function PDFUpload() {
       setSummaryStatus("Generating summary with Gemini...");
 
       const response = await axios.post(`${API_BASE_URL}/api/papers/summary`, {
-        text: extractedText
+        text: extractedText,
+        title: uploadedPaper.title || uploadedPaper.originalFilename
       });
 
       const nextSummary = response.data.summary || emptySummary;
@@ -177,6 +236,7 @@ function PDFUpload() {
           ? "Summary generated and saved successfully."
           : "Summary generated successfully."
       );
+      onActivityChange?.();
     } catch (error) {
       const message =
         error.response?.data?.error ||
@@ -202,7 +262,8 @@ function PDFUpload() {
       setAnalysisStatus("Analyzing paper structure with Gemini...");
 
       const response = await axios.post(`${API_BASE_URL}/api/papers/analyze`, {
-        paperText: extractedText
+        paperText: extractedText,
+        title: uploadedPaper.title || uploadedPaper.originalFilename
       });
 
       const nextAnalysis = {
@@ -222,6 +283,7 @@ function PDFUpload() {
           ? "Paper analysis generated and saved successfully."
           : "Paper analysis generated successfully."
       );
+      onActivityChange?.();
     } catch (error) {
       const message =
         error.response?.data?.error ||
@@ -249,13 +311,18 @@ function PDFUpload() {
         title: uploadedPaper.title || uploadedPaper.originalFilename || "Untitled Paper",
         originalFilename: uploadedPaper.originalFilename,
         storedFilename: uploadedPaper.storedFilename,
+        cloudinaryPublicId: uploadedPaper.cloudinaryPublicId,
+        fileUrl: uploadedPaper.fileUrl,
+        fileSize: uploadedPaper.fileSize,
         extractedText,
+        pageCount: uploadedPaper.pageCount,
+        wordCount: uploadedPaper.wordCount,
         summary,
         analysis
       });
 
       setCurrentPaperId(response.data.paper._id);
-      setStatus("Paper saved to MongoDB.");
+      setStatus("Paper saved.");
       await fetchSavedPapers();
     } catch (error) {
       const message =
@@ -278,7 +345,12 @@ function PDFUpload() {
       setUploadedPaper({
         title: paper.title,
         originalFilename: paper.originalFilename,
-        storedFilename: paper.storedFilename
+        storedFilename: paper.storedFilename,
+        cloudinaryPublicId: paper.cloudinaryPublicId || "",
+        fileUrl: paper.fileUrl || "",
+        fileSize: paper.fileSize || 0,
+        pageCount: paper.pageCount || 0,
+        wordCount: paper.wordCount || 0
       });
       setExtractedText(paper.extractedText || "");
       setSummary(paper.summary || emptySummary);
@@ -308,7 +380,12 @@ function PDFUpload() {
         setUploadedPaper({
           title: "",
           originalFilename: "",
-          storedFilename: ""
+          storedFilename: "",
+          cloudinaryPublicId: "",
+          fileUrl: "",
+          fileSize: 0,
+          pageCount: 0,
+          wordCount: 0
         });
         setExtractedText("");
         resetGeneratedState();
@@ -316,6 +393,7 @@ function PDFUpload() {
       }
 
       await fetchSavedPapers();
+      onActivityChange?.();
       setDashboardStatus("");
     } catch (error) {
       const message =
@@ -389,6 +467,36 @@ function PDFUpload() {
             </button>
           </div>
 
+          {uploadedPaper.originalFilename && (
+            <div className="mt-4 grid gap-2 rounded-md bg-slate-50 p-3 text-sm text-slate-600">
+              <p>
+                <strong className="text-slate-800">PDF size:</strong>{" "}
+                {formatFileSize(uploadedPaper.fileSize)}
+              </p>
+              {uploadedPaper.fileUrl && (
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={uploadedPaper.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-indigo-500 hover:text-indigo-700"
+                  >
+                    View PDF
+                  </a>
+                  <a
+                    href={getDownloadUrl(uploadedPaper.fileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={uploadedPaper.originalFilename}
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-indigo-500 hover:text-indigo-700"
+                  >
+                    Download PDF
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
           {status && <p className="status">{status}</p>}
           {summaryStatus && <p className="status">{summaryStatus}</p>}
           {summaryError && <p className="error">{summaryError}</p>}
@@ -415,28 +523,69 @@ function PDFUpload() {
             <div className="paper-list">
               {savedPapers.map((paper) => (
                 <article
-                  className={`paper-row ${
-                    paper._id === currentPaperId ? "active" : ""
-                  }`}
                   key={paper._id}
+                  className={`paper-row-card ${paper._id === currentPaperId ? "active" : ""}`}
                 >
-                  <button
-                    type="button"
-                    className="paper-select"
-                    onClick={() => onSelectSavedPaper(paper._id)}
-                  >
-                    <span className="paper-title">{paper.title}</span>
-                    <span>{formatDate(paper.uploadDate)}</span>
-                    <span>{paper.analysis?.domain || "Domain pending"}</span>
-                    <span>{paper.analysis?.difficulty || "Difficulty pending"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="danger compact"
-                    onClick={() => onDeletePaper(paper._id)}
-                  >
-                    Delete
-                  </button>
+                  <div className="paper-row-grid">
+                    <div className="paper-left min-w-0">
+                      <h3 className="paper-title truncate">{paper.title || paper.originalFilename}</h3>
+                      <div className="mt-1 text-sm text-slate-500">
+                        {formatDate(paper.uploadDate)} • {formatFileSize(paper.fileSize)}
+                      </div>
+                    </div>
+
+                    <div className="paper-right text-sm text-slate-400">
+                      <div className="truncate">
+                        <strong className="font-medium text-slate-300">Domain:</strong> {paper.analysis?.domain || "—"}
+                      </div>
+                      <div className="mt-1 truncate">
+                        <strong className="font-medium text-slate-300">Difficulty:</strong> {paper.analysis?.difficulty || "—"}
+                      </div>
+                      <div className="mt-1">
+                        <strong className="font-medium text-slate-300">Pages:</strong> {paper.pageCount || "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="paper-actions mt-3 flex flex-wrap gap-2">
+                    {paper.fileUrl && (
+                      <a
+                        href={paper.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs font-medium text-slate-100 transition hover:border-slate-500"
+                      >
+                        View PDF
+                      </a>
+                    )}
+
+                    {paper.fileUrl && (
+                      <a
+                        href={getDownloadUrl(paper.fileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        download={paper.originalFilename}
+                        className="rounded-md border border-slate-700 bg-transparent px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-500"
+                      >
+                        Download
+                      </a>
+                    )}
+
+                    <a
+                      href={`${API_BASE_URL}/api/papers/${paper._id}/export?format=pdf`}
+                      className="rounded-md border border-slate-700 bg-transparent px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-500"
+                    >
+                      Export PDF
+                    </a>
+
+                    <button
+                      type="button"
+                      className="rounded-md border border-rose-700 bg-rose-900/5 px-3 py-2 text-xs font-medium text-rose-400"
+                      onClick={() => onDeletePaper(paper._id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>

@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
-import { fetchPaperById } from "../services/paperApi";
+import { fetchPaperById, exportPaper } from "../services/paperApi";
+import { friendlyError } from "../services/errorUtil";
 
 function formatDate(value) {
   if (!value) {
@@ -11,6 +12,35 @@ function formatDate(value) {
     dateStyle: "full",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) {
+    return "Not available";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function getDownloadUrl(fileUrl) {
+  if (!fileUrl) {
+    return "";
+  }
+
+  if (fileUrl.includes("/upload/") && fileUrl.includes("cloudinary.com")) {
+    return fileUrl.replace("/upload/", "/upload/fl_attachment/");
+  }
+
+  return fileUrl;
 }
 
 function ListBlock({ items, ordered = false }) {
@@ -35,6 +65,41 @@ function PaperDetail({ paperId, onBack }) {
   const [paper, setPaper] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState("");
+
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExport = async (format) => {
+    if (!paper) {
+      return;
+    }
+
+    setIsExporting(true);
+    setExportFormat(format);
+
+    try {
+      const response = await exportPaper(paperId, format);
+      const filename = response.headers["content-disposition"]
+        ?.match(/filename="?([^";]+)"?/)?.[1] ||
+        `${paper.title || "paperlens-export"}.${format}`;
+      downloadBlob(response.data, filename);
+    } catch (apiError) {
+        setError(friendlyError(apiError, "Export failed."));
+    } finally {
+      setIsExporting(false);
+      setExportFormat("");
+    }
+  };
 
   useEffect(() => {
     async function loadPaper() {
@@ -91,6 +156,58 @@ function PaperDetail({ paperId, onBack }) {
             <p className="mt-2 text-sm text-slate-500">
               Original file: {paper.originalFilename}
             </p>
+            <p className="mt-1 text-sm text-slate-500">
+              PDF size: {formatFileSize(paper.fileSize)}
+            </p>
+            {paper.fileUrl && (
+              <>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <a
+                    href={paper.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                  >
+                    View PDF
+                  </a>
+                  <a
+                    href={getDownloadUrl(paper.fileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={paper.originalFilename}
+                    className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-indigo-500 hover:text-indigo-700"
+                  >
+                    Download PDF
+                  </a>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleExport("pdf")}
+                    disabled={isExporting}
+                    className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isExporting && exportFormat === "pdf" ? "Exporting PDF..." : "Export PDF"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExport("markdown")}
+                    disabled={isExporting}
+                    className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-indigo-500 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isExporting && exportFormat === "markdown" ? "Exporting MD..." : "Export MD"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExport("text")}
+                    disabled={isExporting}
+                    className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-indigo-500 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isExporting && exportFormat === "text" ? "Exporting TXT..." : "Export TXT"}
+                  </button>
+                </div>
+              </>
+            )}
           </header>
 
           <div className="grid gap-4 lg:grid-cols-2">

@@ -7,6 +7,12 @@ function errorHandler(err, req, res, next) {
     return res.status(400).json({ error: err.message });
   }
 
+  if (err && err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      error: "PDF files must be 20MB or smaller."
+    });
+  }
+
   const statusCode = err.statusCode || err.status || 500;
   const message = err.message || "Server error";
 

@@ -1,10 +1,10 @@
 const express = require("express");
 const asyncHandler = require("../middleware/asyncHandler");
 const authMiddleware = require("../middleware/authMiddleware");
-const { analyzePaperController } = require("../controllers/analysisController");
+const { getAnalytics } = require("../controllers/analyticsController");
 
 const router = express.Router();
 
-router.post("/", authMiddleware, asyncHandler(analyzePaperController));
+router.get("/", authMiddleware, asyncHandler(getAnalytics));
 
 module.exports = router;

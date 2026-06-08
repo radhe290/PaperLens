@@ -6,9 +6,11 @@ export async function fetchPapers({
   search = "",
   sort = "newest",
   page = 1,
-  limit = 12
+  limit = 12,
+  signal
 } = {}) {
   const response = await axios.get(`${API_BASE_URL}/api/papers`, {
+    signal,
     params: {
       search: search || undefined,
       sort,
@@ -26,16 +28,37 @@ export async function fetchPapers({
       totalPages: 1,
       hasNextPage: false,
       hasPreviousPage: page > 1
+    },
+    stats: response.data.stats || {
+      totalPapers: 0,
+      totalSummariesGenerated: 0,
+      totalAnalysesGenerated: 0,
+      mostRecentUploadDate: null
     }
   };
 }
 
-export async function fetchPaperById(paperId) {
-  const response = await axios.get(`${API_BASE_URL}/api/papers/${paperId}`);
+export async function fetchPaperById(paperId, { signal } = {}) {
+  const response = await axios.get(`${API_BASE_URL}/api/papers/${paperId}`, {
+    signal
+  });
   return response.data.paper;
 }
 
-export async function deletePaperById(paperId) {
-  const response = await axios.delete(`${API_BASE_URL}/api/papers/${paperId}`);
+export async function deletePaperById(paperId, { signal } = {}) {
+  const response = await axios.delete(`${API_BASE_URL}/api/papers/${paperId}`, {
+    signal
+  });
   return response.data;
+}
+
+export async function exportPaper(paperId, format, { signal } = {}) {
+  const response = await axios.get(`${API_BASE_URL}/api/papers/${paperId}/export`, {
+    signal,
+    params: {
+      format
+    },
+    responseType: "blob"
+  });
+  return response;
 }

@@ -15,9 +15,10 @@ function getGeminiClient() {
   return geminiClient;
 }
 
-function getGeminiModel() {
+function getGeminiModel(modelName = null) {
+  const model = modelName || env.geminiModel || "gemini-1.5-flash";
   return getGeminiClient().getGenerativeModel({
-    model: env.geminiModel
+    model
   });
 }
 
