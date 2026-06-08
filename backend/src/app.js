@@ -14,7 +14,24 @@ const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
-app.use(cors({ origin: env.corsOrigin }));
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://paper-lens-virid.vercel.app",
+  "https://paper-lens-git-main-radhika-dwivedis-projects-ffb2469c.vercel.app"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
