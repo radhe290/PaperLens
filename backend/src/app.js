@@ -31,6 +31,9 @@ app.use("/api/activities", activityRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/chat", chatRouter);
 
+app.get("/test-auth", (req, res) => {
+  res.json({ success: true });
+});
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
