@@ -37,9 +37,9 @@ function buildExportFilename(paper, format) {
 function buildExportHeader(paper) {
   const uploadDate = paper.uploadDate
     ? new Intl.DateTimeFormat("en", {
-        dateStyle: "medium",
-        timeStyle: "short"
-      }).format(new Date(paper.uploadDate))
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(new Date(paper.uploadDate))
     : "Not available";
 
   return {
@@ -449,57 +449,129 @@ async function getPaperById(req, res) {
 }
 
 async function generateSummary(req, res) {
-  validatePaperId(req.params.id);
+  const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
+  
+  console.log(`[SUMMARY-${requestId}] ========== REQUEST START ==========`);
+  console.log(`[SUMMARY-${requestId}] paperId: ${req.params.id}`);
+  console.log(`[SUMMARY-${requestId}] userId: ${req.userId}`);
+  console.log(`[SUMMARY-${requestId}] timestamp: ${new Date().toISOString()}`);
 
-  const paper = await Paper.findOne({ _id: req.params.id, userId: req.userId });
+  try {
+    validatePaperId(req.params.id);
+    console.log(`[SUMMARY-${requestId}] ✓ Paper ID format valid`);
 
-  if (!paper) {
-    throw createHttpError(404, "Paper not found.");
+    console.log(`[SUMMARY-${requestId}] Querying database...`);
+    const paper = await Paper.findOne({ _id: req.params.id, userId: req.userId });
+
+    if (!paper) {
+      console.error(`[SUMMARY-${requestId}] ✗ Paper not found in database`);
+      console.error(`[SUMMARY-${requestId}] Query: { _id: "${req.params.id}", userId: "${req.userId}" }`);
+      
+      // Debug: Check if paper exists at all (with different user)
+      const paperExists = await Paper.findById(req.params.id).select("userId title");
+      if (paperExists) {
+        console.error(`[SUMMARY-${requestId}] DEBUG: Paper exists but owned by DIFFERENT user!`, {
+          paperOwnerId: paperExists.userId.toString(),
+          requestedBy: req.userId.toString(),
+          match: paperExists.userId.toString() === req.userId.toString()
+        });
+      } else {
+        console.error(`[SUMMARY-${requestId}] DEBUG: Paper does not exist in database`);
+      }
+
+      throw createHttpError(404, "Paper not found.");
+    }
+
+    console.log(`[SUMMARY-${requestId}] ✓ Paper found: "${paper.title}"`);
+
+    const summary = await generatePaperSummary(paper.extractedText);
+    console.log(`[SUMMARY-${requestId}] ✓ Summary generated (${JSON.stringify(summary).length} bytes)`);
+
+    const updated = await Paper.findOneAndUpdate(
+      { _id: paper._id, userId: req.userId },
+      { summary },
+      { new: true, runValidators: true }
+    );
+    console.log(`[SUMMARY-${requestId}] ✓ Paper updated in database`);
+
+    await recordActivity({
+      userId: req.userId,
+      type: "summary_generated",
+      title: paper.title,
+      metadata: { paperId: paper._id }
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`[SUMMARY-${requestId}] ========== SUCCESS (${duration}ms) ==========`);
+
+    return res.status(200).json({ message: "Summary generated successfully", paper: updated });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[SUMMARY-${requestId}] ========== FAILED (${duration}ms) ==========`);
+    console.error(`[SUMMARY-${requestId}] Error:`, error.message);
+    console.error(`[SUMMARY-${requestId}] Stack:`, error.stack);
+    throw error;
   }
-
-  const summary = await generatePaperSummary(paper.extractedText);
-
-  const updated = await Paper.findOneAndUpdate(
-    { _id: paper._id, userId: req.userId },
-    { summary },
-    { new: true, runValidators: true }
-  );
-
-  await recordActivity({
-    userId: req.userId,
-    type: "summary_generated",
-    title: paper.title,
-    metadata: { paperId: paper._id }
-  });
-
-  return res.status(200).json({ message: "Summary generated successfully", paper: updated });
 }
 
 async function generateAnalysis(req, res) {
-  validatePaperId(req.params.id);
+  const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
+  
+  console.log(`[ANALYSIS-${requestId}] ========== REQUEST START ==========`);
+  console.log(`[ANALYSIS-${requestId}] paperId: ${req.params.id}`);
+  console.log(`[ANALYSIS-${requestId}] userId: ${req.userId}`);
+  console.log(`[ANALYSIS-${requestId}] timestamp: ${new Date().toISOString()}`);
 
-  const paper = await Paper.findOne({ _id: req.params.id, userId: req.userId });
+  try {
+    validatePaperId(req.params.id);
+    console.log(`[ANALYSIS-${requestId}] ✓ Paper ID format valid`);
 
-  if (!paper) {
-    throw createHttpError(404, "Paper not found.");
+    console.log(`[ANALYSIS-${requestId}] Querying database...`);
+    const paper = await Paper.findOne({ _id: req.params.id, userId: req.userId });
+
+    if (!paper) {
+      console.error(`[ANALYSIS-${requestId}] ✗ Paper not found in database`);
+      console.error(`[ANALYSIS-${requestId}] Query: { _id: "${req.params.id}", userId: "${req.userId}" }`);
+      
+      const paperExists = await Paper.findById(req.params.id).select("userId title");
+      if (paperExists) {
+        console.error(`[ANALYSIS-${requestId}] DEBUG: Paper exists but owned by DIFFERENT user`);
+      }
+
+      throw createHttpError(404, "Paper not found.");
+    }
+
+    console.log(`[ANALYSIS-${requestId}] ✓ Paper found: "${paper.title}"`);
+
+    const analysis = await analyzePaper(paper.extractedText);
+    console.log(`[ANALYSIS-${requestId}] ✓ Analysis generated`);
+
+    const updated = await Paper.findOneAndUpdate(
+      { _id: paper._id, userId: req.userId },
+      { analysis },
+      { new: true, runValidators: true }
+    );
+    console.log(`[ANALYSIS-${requestId}] ✓ Paper updated in database`);
+
+    await recordActivity({
+      userId: req.userId,
+      type: "analysis_generated",
+      title: paper.title,
+      metadata: { paperId: paper._id }
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`[ANALYSIS-${requestId}] ========== SUCCESS (${duration}ms) ==========`);
+
+    return res.status(200).json({ message: "Analysis generated successfully", paper: updated });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[ANALYSIS-${requestId}] ========== FAILED (${duration}ms) ==========`);
+    console.error(`[ANALYSIS-${requestId}] Error:`, error.message);
+    throw error;
   }
-
-  const analysis = await analyzePaper(paper.extractedText);
-
-  const updated = await Paper.findOneAndUpdate(
-    { _id: paper._id, userId: req.userId },
-    { analysis },
-    { new: true, runValidators: true }
-  );
-
-  await recordActivity({
-    userId: req.userId,
-    type: "analysis_generated",
-    title: paper.title,
-    metadata: { paperId: paper._id }
-  });
-
-  return res.status(200).json({ message: "Analysis generated successfully", paper: updated });
 }
 
 async function deletePaper(req, res) {
@@ -591,5 +663,7 @@ module.exports = {
   getPaperById,
   deletePaper,
   exportPaper,
-  updatePaperAnalysis
+  updatePaperAnalysis,
+  generateSummary,
+  generateAnalysis
 };

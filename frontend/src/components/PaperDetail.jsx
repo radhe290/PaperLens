@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useState } from "react";
-import { fetchPaperById, exportPaper } from "../services/paperApi";
+import { fetchPaperById, exportPaper, generateSummary, generateAnalysis } from "../services/paperApi";
 import { friendlyError } from "../services/errorUtil";
 
 function formatDate(value) {
@@ -104,36 +104,147 @@ function PaperDetail({ paperId, onBack }) {
   };
 
   const handleGenerateSummary = async () => {
-    if (!paper) return;
+    console.log("[SUMMARY] Handler called", { paperId, hasPaper: !!paper });
+    
+    if (!paper) {
+      setError("Paper not loaded. Please refresh the page.");
+      return;
+    }
+
+    if (!paperId) {
+      setError("Paper ID is missing. Please refresh the page.");
+      return;
+    }
+
+    // Validate paperId is MongoDB ObjectId format (24 hex chars)
+    if (!/^[0-9a-f]{24}$/i.test(paperId)) {
+      setError("Invalid paper ID format. Please refresh the page.");
+      return;
+    }
 
     setIsGeneratingSummary(true);
     setError("");
 
+    const requestId = Math.random().toString(36).substring(7);
+    const startTime = Date.now();
+    const currentPaperId = paperId; // Capture current paperId to detect if it changes
+
+    console.log(`[SUMMARY-${requestId}] Starting for paperId: ${currentPaperId}`);
+
     try {
-      const result = await generateSummary(paperId);
+      const result = await generateSummary(currentPaperId);
+      
+      const duration = Date.now() - startTime;
+      console.log(`[SUMMARY-${requestId}] Success in ${duration}ms`);
+
+      // Verify paperId hasn't changed during request
+      if (currentPaperId !== paperId) {
+        console.warn(`[SUMMARY-${requestId}] PaperId changed during request, ignoring result`);
+        return;
+      }
+
       if (result?.paper) {
         setPaper(result.paper);
+        console.log(`[SUMMARY-${requestId}] Paper state updated`);
       }
     } catch (apiError) {
-      setError(friendlyError(apiError, "Failed to generate summary."));
+      const duration = Date.now() - startTime;
+      
+      console.error(`[SUMMARY-${requestId}] Failed after ${duration}ms:`, {
+        status: apiError?.response?.status,
+        message: apiError?.message,
+        data: apiError?.response?.data
+      });
+
+      // Better error messages
+      let errorMessage = "Failed to generate summary.";
+      
+      if (apiError?.response?.status === 401) {
+        errorMessage = "Your session has expired. Please log in again.";
+      } else if (apiError?.response?.status === 404) {
+        errorMessage = "Paper not found. It may have been deleted.";
+      } else if (apiError?.response?.status === 503 || apiError?.response?.status === 429) {
+        errorMessage = "AI service is busy. Please try again in a few minutes.";
+      } else if (apiError?.message?.includes("Network")) {
+        errorMessage = "Network error. Please check your connection.";
+      } else {
+        errorMessage = friendlyError(apiError, errorMessage);
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsGeneratingSummary(false);
     }
   };
 
   const handleGenerateAnalysis = async () => {
-    if (!paper) return;
+    console.log("[ANALYSIS] Handler called", { paperId, hasPaper: !!paper });
+    
+    if (!paper) {
+      setError("Paper not loaded. Please refresh the page.");
+      return;
+    }
+
+    if (!paperId) {
+      setError("Paper ID is missing. Please refresh the page.");
+      return;
+    }
+
+    // Validate paperId is MongoDB ObjectId format (24 hex chars)
+    if (!/^[0-9a-f]{24}$/i.test(paperId)) {
+      setError("Invalid paper ID format. Please refresh the page.");
+      return;
+    }
 
     setIsGeneratingAnalysis(true);
     setError("");
 
+    const requestId = Math.random().toString(36).substring(7);
+    const startTime = Date.now();
+    const currentPaperId = paperId;
+
+    console.log(`[ANALYSIS-${requestId}] Starting for paperId: ${currentPaperId}`);
+
     try {
-      const result = await generateAnalysis(paperId);
+      const result = await generateAnalysis(currentPaperId);
+      
+      const duration = Date.now() - startTime;
+      console.log(`[ANALYSIS-${requestId}] Success in ${duration}ms`);
+
+      // Verify paperId hasn't changed during request
+      if (currentPaperId !== paperId) {
+        console.warn(`[ANALYSIS-${requestId}] PaperId changed during request, ignoring result`);
+        return;
+      }
+
       if (result?.paper) {
         setPaper(result.paper);
+        console.log(`[ANALYSIS-${requestId}] Paper state updated`);
       }
     } catch (apiError) {
-      setError(friendlyError(apiError, "Failed to generate analysis."));
+      const duration = Date.now() - startTime;
+      
+      console.error(`[ANALYSIS-${requestId}] Failed after ${duration}ms:`, {
+        status: apiError?.response?.status,
+        message: apiError?.message,
+        data: apiError?.response?.data
+      });
+
+      let errorMessage = "Failed to generate analysis.";
+      
+      if (apiError?.response?.status === 401) {
+        errorMessage = "Your session has expired. Please log in again.";
+      } else if (apiError?.response?.status === 404) {
+        errorMessage = "Paper not found. It may have been deleted.";
+      } else if (apiError?.response?.status === 503 || apiError?.response?.status === 429) {
+        errorMessage = "AI service is busy. Please try again in a few minutes.";
+      } else if (apiError?.message?.includes("Network")) {
+        errorMessage = "Network error. Please check your connection.";
+      } else {
+        errorMessage = friendlyError(apiError, errorMessage);
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsGeneratingAnalysis(false);
     }
@@ -246,6 +357,24 @@ function PaperDetail({ paperId, onBack }) {
                 </div>
               </>
             )}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleGenerateSummary}
+                disabled={isGeneratingSummary}
+                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isGeneratingSummary ? "Generating Summary..." : "Generate Summary"}
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateAnalysis}
+                disabled={isGeneratingAnalysis}
+                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-indigo-500 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isGeneratingAnalysis ? "Generating Analysis..." : "Generate Analysis"}
+              </button>
+            </div>
           </header>
 
           <div className="grid gap-4 lg:grid-cols-2">

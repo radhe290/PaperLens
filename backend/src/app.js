@@ -14,6 +14,12 @@ const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
+// Simple request logger for debugging route issues
+app.use((req, res, next) => {
+  console.info(`[req] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 const allowedOrigins = [
   "http://localhost:5173",
   "https://paper-lens-virid.vercel.app",
@@ -35,18 +41,17 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// ===== ROUTE REGISTRATION (CRITICAL: Order matters, no duplicates) =====
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);
-app.use("/api", uploadRouter);
-app.use("/api/summarize", summaryRouter);
-app.use("/api/analyze", analysisRouter);
-app.use("/api/papers", uploadRouter);
-app.use("/api/papers", paperRouter);
-app.use("/api/papers/summary", summaryRouter);
-app.use("/api/papers/analyze", analysisRouter);
+app.use("/api/papers", paperRouter);  // SINGLE place for /api/papers/* routes
 app.use("/api/activities", activityRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/chat", chatRouter);
+
+// Legacy routes for backward compatibility (deprecated)
+// app.use("/api/summarize", summaryRouter);      // Use POST /api/papers/:id/generate-summary instead
+// app.use("/api/analyze", analysisRouter);       // Use POST /api/papers/:id/generate-analysis instead
 
 app.get("/test-auth", (req, res) => {
   res.json({ success: true });

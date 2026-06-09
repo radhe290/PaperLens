@@ -15,6 +15,21 @@ const env = {
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || ""
 };
-console.log("Cloud Name:", process.env.CLOUDINARY_CLOUD_NAME);
-console.log("API Key:", process.env.CLOUDINARY_API_KEY);
+
+// Validate required environment variables in production
+if (env.nodeEnv === "production") {
+  const required = ["MONGODB_URI", "JWT_SECRET", "GEMINI_API_KEY"];
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    console.error(`STARTUP ERROR: Missing required environment variables: ${missing.join(", ")}`);
+    process.exit(1);
+  }
+  
+  console.log("[STARTUP] Environment validation passed");
+  console.log(`[STARTUP] Node environment: ${env.nodeEnv}`);
+  console.log(`[STARTUP] Port: ${env.port}`);
+  console.log(`[STARTUP] CORS origins configured: ${env.corsOrigin}`);
+}
+
 module.exports = env;
