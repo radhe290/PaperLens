@@ -18,6 +18,8 @@ router.post("/", asyncHandler(savePaper));
 router.get("/", asyncHandler(getAllPapers));
 router.get("/:id", asyncHandler(getPaperById));
 router.get("/:id/export", asyncHandler(exportPaper));
+router.post("/:id/generate-summary", asyncHandler(generateSummary));
+router.post("/:id/generate-analysis", asyncHandler(generateAnalysis));
 router.delete("/:id", asyncHandler(deletePaper));
 router.put("/:id", asyncHandler(updatePaperAnalysis));
 

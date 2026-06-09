@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const Paper = require("../models/Paper");
 const { deletePdf } = require("../services/cloudinaryUploadService");
 const { recordActivity } = require("../services/activityService");
+const { generatePaperSummary } = require("../services/geminiService");
+const { analyzePaper } = require("../services/analysisService");
 
 function createHttpError(statusCode, message) {
   const error = new Error(message);
@@ -444,6 +446,60 @@ async function getPaperById(req, res) {
   }
 
   return res.status(200).json({ paper });
+}
+
+async function generateSummary(req, res) {
+  validatePaperId(req.params.id);
+
+  const paper = await Paper.findOne({ _id: req.params.id, userId: req.userId });
+
+  if (!paper) {
+    throw createHttpError(404, "Paper not found.");
+  }
+
+  const summary = await generatePaperSummary(paper.extractedText);
+
+  const updated = await Paper.findOneAndUpdate(
+    { _id: paper._id, userId: req.userId },
+    { summary },
+    { new: true, runValidators: true }
+  );
+
+  await recordActivity({
+    userId: req.userId,
+    type: "summary_generated",
+    title: paper.title,
+    metadata: { paperId: paper._id }
+  });
+
+  return res.status(200).json({ message: "Summary generated successfully", paper: updated });
+}
+
+async function generateAnalysis(req, res) {
+  validatePaperId(req.params.id);
+
+  const paper = await Paper.findOne({ _id: req.params.id, userId: req.userId });
+
+  if (!paper) {
+    throw createHttpError(404, "Paper not found.");
+  }
+
+  const analysis = await analyzePaper(paper.extractedText);
+
+  const updated = await Paper.findOneAndUpdate(
+    { _id: paper._id, userId: req.userId },
+    { analysis },
+    { new: true, runValidators: true }
+  );
+
+  await recordActivity({
+    userId: req.userId,
+    type: "analysis_generated",
+    title: paper.title,
+    metadata: { paperId: paper._id }
+  });
+
+  return res.status(200).json({ message: "Analysis generated successfully", paper: updated });
 }
 
 async function deletePaper(req, res) {

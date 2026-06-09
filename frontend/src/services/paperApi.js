@@ -62,3 +62,17 @@ export async function exportPaper(paperId, format, { signal } = {}) {
   });
   return response;
 }
+
+export async function generateSummary(paperId, { signal } = {}) {
+  const response = await axios.post(`${API_BASE_URL}/api/papers/${paperId}/generate-summary`, null, {
+    signal
+  });
+  return response.data;
+}
+
+export async function generateAnalysis(paperId, { signal } = {}) {
+  const response = await axios.post(`${API_BASE_URL}/api/papers/${paperId}/generate-analysis`, null, {
+    signal
+  });
+  return response.data;
+}

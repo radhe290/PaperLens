@@ -67,6 +67,8 @@ function PaperDetail({ paperId, onBack }) {
   const [error, setError] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState("");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
   const downloadBlob = (blob, filename) => {
     const url = URL.createObjectURL(blob);
@@ -98,6 +100,42 @@ function PaperDetail({ paperId, onBack }) {
     } finally {
       setIsExporting(false);
       setExportFormat("");
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!paper) return;
+
+    setIsGeneratingSummary(true);
+    setError("");
+
+    try {
+      const result = await generateSummary(paperId);
+      if (result?.paper) {
+        setPaper(result.paper);
+      }
+    } catch (apiError) {
+      setError(friendlyError(apiError, "Failed to generate summary."));
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const handleGenerateAnalysis = async () => {
+    if (!paper) return;
+
+    setIsGeneratingAnalysis(true);
+    setError("");
+
+    try {
+      const result = await generateAnalysis(paperId);
+      if (result?.paper) {
+        setPaper(result.paper);
+      }
+    } catch (apiError) {
+      setError(friendlyError(apiError, "Failed to generate analysis."));
+    } finally {
+      setIsGeneratingAnalysis(false);
     }
   };
 
