@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+// If VITE_API_BASE_URL is not set (e.g. local dev), default to backend on localhost:4000
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 export async function fetchPapers({
   search = "",
@@ -53,7 +54,9 @@ export async function deletePaperById(paperId, { signal } = {}) {
 }
 
 export async function exportPaper(paperId, format, { signal } = {}) {
-  const response = await axios.get(`${API_BASE_URL}/api/papers/${paperId}/export`, {
+  const url = `${API_BASE_URL}/api/papers/${paperId}/export`;
+  console.info(`[api] GET ${url}`);
+  const response = await axios.get(url, {
     signal,
     params: {
       format
@@ -64,14 +67,18 @@ export async function exportPaper(paperId, format, { signal } = {}) {
 }
 
 export async function generateSummary(paperId, { signal } = {}) {
-  const response = await axios.post(`${API_BASE_URL}/api/papers/${paperId}/generate-summary`, null, {
+  const url = `${API_BASE_URL}/api/papers/${paperId}/generate-summary`;
+  console.info(`[api] POST ${url}`);
+  const response = await axios.post(url, null, {
     signal
   });
   return response.data;
 }
 
 export async function generateAnalysis(paperId, { signal } = {}) {
-  const response = await axios.post(`${API_BASE_URL}/api/papers/${paperId}/generate-analysis`, null, {
+  const url = `${API_BASE_URL}/api/papers/${paperId}/generate-analysis`;
+  console.info(`[api] POST ${url}`);
+  const response = await axios.post(url, null, {
     signal
   });
   return response.data;
