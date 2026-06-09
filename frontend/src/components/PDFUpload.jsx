@@ -165,7 +165,7 @@ function PDFUpload({ onActivityChange }) {
       resetGeneratedState();
 
       const response = await axios.post(
-        `${API_BASE_URL}/api/papers/upload`,
+        `${API_BASE_URL}/api/papers`,
         formData,
         {
           headers: {
